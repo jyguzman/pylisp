@@ -8,9 +8,11 @@ class Lexer:
         self.pos = 0
         self.tokens = []
         self.specialForms = {
-            "if": (TokenType.IF, 'if'),
-            'def': (TokenType.DEF, 'def'),
-            'lambda': (TokenType.LAMBDA, 'lambda')
+            'if': (TokenType.IF, 'if'),
+            'define': (TokenType.DEFINE, 'define'),
+            'lambda': (TokenType.LAMBDA, 'lambda'),
+            'defun': (TokenType.DEFUN, 'defun'),
+            'list': (TokenType.LIST, 'list')
         }
 
     def is_eof(self) -> bool:
@@ -32,10 +34,11 @@ class Lexer:
         string = []
         self.advance()
 
-        while self.peek().isalpha() or self.peek() == '-':
+        while self.peek() != '"':
             string.append(self.peek())
             self.advance()
 
+        self.advance()
         return Token(TokenType.STRING, start_pos, ''.join(string))
 
     def lex_num(self) -> Token:
@@ -84,6 +87,20 @@ class Lexer:
             token = Token(TokenType.RPAREN, self.pos, c)
         elif c == ';':
             token = Token(TokenType.SEMI, self.pos, c)
+        elif c == '=':
+            token = Token(TokenType.EQUALS, self.pos, c)
+        elif c == '<':
+            if self.peek(1) == '=':
+                token = Token(TokenType.GEQ, self.pos, '<=')
+                self.advance()
+            else:
+                token = Token(TokenType.GREATER, self.pos, c)
+        elif c == '>':
+            if self.peek(1) == '=':
+                token = Token(TokenType.LEQ, self.pos, '>=')
+                self.advance()
+            else:
+                token = Token(TokenType.LESS, self.pos, c)
         elif c == '+':
             token = Token(TokenType.PLUS, self.pos, c)
         elif c == '*':

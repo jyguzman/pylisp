@@ -3,6 +3,13 @@ from parser import Parser
 from eval import Eval
 
 
+def load_source_file(file_path: str):
+    source = ""
+    with open(file_path) as f:
+        source = f.read()
+    return source
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     source_one = """
@@ -11,19 +18,27 @@ if __name__ == '__main__':
     ((lambda (x y) (- x y)) 5 6)
     (( lambda (w x y z) (+ w (- y z) (* z (+ 5 10 (- 5 10 (/ 5 10))) x z) ) ) 5 (- 10 20) 15 20)
     """
-    source_two = "(print ((lambda (x y) (+ (* x x) (* y y) (* 2 x y))) 3 4))"
+    source_two = "(print ( print (+ 3 5)))"
     source_three = """
-    (print (+ 3 5))
+    (def variable (- 20 10))
+    (def new-variable (+ 10 30))
+    (print (- variable (+ new-variable 30)))
+    (def square (lambda (x) (* x x)))
     """
-    lexer = Lexer(source_two)
+    long_lambda = "(print(( lambda (w x y z) (+ w (- y z) (* z (+ 5 10 (- 5 10 (/ 5 10))) x z) ) ) 5 (- 10 20) 15 20))"
+    test = '(if (> x 0) (print "Positive") (print "Negative"))'
+    ex = "(print (lambda (x y z) (- 3 x y z 5)) (+ 10 (- 5 6)) (+ 10 15))"
+    lexer = Lexer("""
+    (print (>= 3 1 1.7 0.8 9))
+    (print (+ 5 8 (- 6 7)))
+    """)
     lexer.lex()
     lexer.print()
     parser = Parser(lexer.tokens)
     lists = parser.parse()
-    # for i, list_ in enumerate(lists):
-    #     print(list_, i)
-    evaluator = Eval(lists)
-    # print(lists[2])
-    print(lists[0])
-    evaluator.evaluate(lists[0])
-    # print(evaluator.evaluate(lists[0]))
+    evaluator = Eval(lists, {})
+    for i, list_ in enumerate(lists):
+        if list_:
+            evaluator.evaluateList(lists[i], evaluator.global_env)
+
+    print("global env", evaluator.global_env)

@@ -10,9 +10,10 @@ class TokenType(Enum):
     SEMI = auto()
 
     # special forms
-    DEF = auto()
+    DEFINE = auto()
     IF = auto()
     LAMBDA = auto()
+    DEFUN = auto()
     LIST = auto()
 
     # types
