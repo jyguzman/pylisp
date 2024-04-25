@@ -28,13 +28,7 @@ class Parser:
         return lisp_list
 
     def parse_expression(self):
-        if self.peek().type == TokenType.LPAREN:
-            return self.parse_list()
-        return self.atom()
-
-    def print(self, lisp_lists):
-        for l_list in lisp_lists:
-            print(l_list)
+        return self.parse_list() if self.peek().type == TokenType.LPAREN else self.atom()
 
     def parse(self):
         lists = []
