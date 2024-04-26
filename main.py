@@ -31,6 +31,8 @@ if __name__ == '__main__':
     lexer = Lexer("""
     (print (>= 3 1 1.7 0.8 9))
     (print (+ 5 8 (- 6 7)))
+    (define hello (lambda () (print "Hello!")))
+    (hello)
     """)
     lexer.lex()
     lexer.print()
@@ -39,6 +41,6 @@ if __name__ == '__main__':
     evaluator = Eval(lists, {})
     for i, list_ in enumerate(lists):
         if list_:
-            evaluator.evaluateList(lists[i], evaluator.global_env)
+            evaluator.evaluate(lists[i], evaluator.global_env)
 
     print("global env", evaluator.global_env)

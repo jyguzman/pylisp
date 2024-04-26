@@ -34,21 +34,19 @@ class Eval:
         self.lists = lists
         self.global_env = global_env
 
-    def evaluateList(self, lisp_list, env=None):
+    def evaluate(self, lisp_list, env=None):
         if not isinstance(lisp_list, list):
             return lisp_list
         first_val = lisp_list[0]
-        print(first_val, lisp_list)
-        # print(first_val, lisp_list)
         if isinstance(first_val, list):
-            first_val = self.evaluateList(first_val, env)
+            first_val = self.evaluate(first_val, env)
             env[first_val] = first_val
         if isinstance(first_val, Function):
             return self.eval_fn(first_val, lisp_list[1:], env)
-        # if first_val in SPECIAL:
-        #     return self.eval_special_form(first_val, lisp_list)
         if first_val == 'lambda':
             fn = Function(lisp_list[1], lisp_list[2])
+            if len(lisp_list) < 4:
+                return fn
             return self.eval_fn(fn, lisp_list[3:], env)
         if first_val == 'defun':
             ident, args, body = lisp_list[1], lisp_list[2], lisp_list[3]
@@ -56,11 +54,10 @@ class Eval:
         if first_val == 'if':
             return self.eval_if(lisp_list[1:], env)
         if first_val in BINARY_OPS:
-            print("in binary ops", first_val)
             return self.binary(first_val, cons(lisp_list), env)
         if first_val == 'print':
             return self.print(lisp_list[1], env)
-        if first_val == 'def':
+        if first_val == 'define':
             return self.define(lisp_list[1:], env)
         env_val = env.get(first_val, None)
         if env_val and isinstance(env_val, Function):
@@ -79,28 +76,26 @@ class Eval:
                     fn_body[i] = fn_scope[fn_body[i]]
 
     def eval_fn(self, fn: Function, args: list, env=None):
-        if not args:
-            return fn
-
         params, body = fn.params, fn.body[0:]
         fn_scope = {}
         for i in range(len(params)):
-            fn_scope[params[i]] = self.evaluateList(args[i], env)
+            fn_scope[params[i]] = self.evaluate(args[i], env)
 
         self.bind_function_vars(fn_scope, body, env)
-        return self.evaluateList(body, env)
+        return self.evaluate(body, env)
 
     def binary(self, op: str, lisp_list: list, env=None):
         if op in MATH_OPS:
             return self.math_op(op, lisp_list, env)
         if op in COMPARISON_OPS:
             return self.comparison(op, lisp_list, env)
-        return None
+        print(f"Invalid operator {op}")
+        exit(1)
 
     def comparison(self, op: str, lisp_list: list, env: dict = None):
         val = env.get(lisp_list[0], lisp_list[0])
         for elem in lisp_list[1:]:
-            other_val = self.evaluateList(elem, env)
+            other_val = self.evaluate(elem, env)
             other_val = env.get(other_val, other_val)
             if (
                 op == '=' and val != other_val or
@@ -115,7 +110,7 @@ class Eval:
     def math_op(self, op: str, lisp_list: list, env: dict = None):
         acc = env.get(lisp_list[0], lisp_list[0])
         for elem in lisp_list[1:]:
-            val = self.evaluateList(elem, env)
+            val = self.evaluate(elem, env)
             val = env.get(val, val)
             check_is_number(val)
             if op == '+':
@@ -137,21 +132,18 @@ class Eval:
         true_branch = args[2]
         false_branch = args[3]
 
-        val = self.evaluateList(val, env)
+        val = self.evaluate(val, env)
 
         pass
 
     def define(self, lisp_list: list, env=None):
-        # print("in define", lisp_list[1])
-        ident = self.evaluateList(lisp_list[0], env)
-        val = self.evaluateList(lisp_list[1], env)
+        ident = self.evaluate(lisp_list[0], env)
+        val = self.evaluate(lisp_list[1], env)
         env[ident] = val
-        # print("val in define", val)
         return val
 
     def print(self, args: list, env=None):
-        # print("args in print", args, env)
-        val = self.evaluateList(args, env)
+        val = self.evaluate(args, env)
         print(env.get(val, val))
         return val
 
