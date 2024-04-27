@@ -39,13 +39,30 @@ if __name__ == '__main__':
             (define thing 50) 
             (+ thing x) ) ) )
     """
+    """
+    (defun fib (n)
+      ; Return the nth Fibonacci number
+      (if (< n 2)
+          n
+          (+ (fib (- n 1))
+             (fib (- n 2)))))
+    """
     lexer = Lexer("""
-    (define square (lambda (x) (* x x)))
-    ; (define square 25)
-    (print (compose 10))
+    (defun square (x) (* x x))
+    (print (square 5))
+    (defun fib (n)
+      ; Return the nth Fibonacci number
+      (if (< n 2)
+          n
+          (+ (fib (- n 1))
+             (fib (- n 2)))))
+    (print fib)
+    ; (print (fib 2))
+    ; (if (> 5 10) (print "true") (print "false"))
+    ; (print (fib 5))
     """)
     lexer.lex()
-    lexer.print()
+    # lexer.print()
     parser = Parser(lexer.tokens)
     lists = parser.parse()
     evaluator = Eval(lists, {})

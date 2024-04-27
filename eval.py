@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import functools
-from env import Env
 
 MATH_OPS = {'+', '-', '*', '/'}
 COMPARISON_OPS = {'=', '>', '>=', '<', '<='}
@@ -31,6 +30,24 @@ def cons(lisp_list: list):
     return lisp_list[1:]
 
 
+def math_binary(op: str, a, b):
+    if not isinstance(a, (int, float)):
+        print(f'{a} is not a number.')
+        exit(1)
+    if not isinstance(b, (int, float)):
+        print(f'{b} is not a number.')
+        exit(1)
+
+    if op == '+':
+        return a + b
+    elif op == '-':
+        return a - b
+    elif op == '*':
+        return a * b
+    else:
+        return a / b
+
+
 class Eval:
     def __init__(self, lists: list = None, env: dict = None):
         self.lists = lists
@@ -43,10 +60,12 @@ class Eval:
             return lisp_value
         if isinstance(lisp_value[0], list):
             lisp_value[0] = self.evaluate(lisp_value[0])
-        first_val = self.evaluate(lisp_value[0])
+        first_val = self.env.get(lisp_value[0], lisp_value[0])
         if not isinstance(first_val, Function) and first_val not in FUNCTIONS:
+            print("this isnt valid", first_val)
             print("First element must be a function, operator, or special form.")
             exit(1)
+        # print("first val", first_val)
         if isinstance(first_val, Function):
             return self.eval_fn(first_val, lisp_value[1:])
         if first_val == 'lambda':
@@ -67,10 +86,8 @@ class Eval:
             return self.define(lisp_value[1:])
         if first_val in BINARY_OPS:
             return self.binary(first_val, cons(lisp_value))
-        return None
-
-    def eval_special_form(self, sf: str, lisp_list: list):
-        pass
+        print(f"Operator or function {first_val} not available.")
+        exit(1)
 
     def bind_function_vars(self, fn_scope: dict, fn_body: list):
         for i, elem in enumerate(fn_body):
@@ -111,39 +128,21 @@ class Eval:
                 return False
         return True
 
-    def op(self, op: str, a, b):
-        if not isinstance(a, (int, float)):
-            print(f'{a} is not a number.')
-            exit(1)
-        if not isinstance(b, (int, float)):
-            print(f'{b} is not a number.')
-            exit(1)
-
-        if op == '+':
-            return a + b
-        elif op == '-':
-            return a - b
-        elif op == '*':
-            return a * b
-        else:
-            return a / b
-
     def math_op(self, op: str, lisp_list: list):
-        new_list = [self.evaluate(item) for item in lisp_list]
-        return functools.reduce(lambda a, b: self.op(op, a, b), new_list)
+        # new_list = [self.evaluate(item) for item in lisp_list]
+        # return functools.reduce(lambda a, b: math_binary(op, a, b), new_list)
+        acc = self.evaluate(lisp_list[0])
+        for other in lisp_list[1:]:
+            acc += self.evaluate(other)
+        return acc
 
     def bind_cond_vars(self, cond: list, variables: list):
         pass
 
     def eval_if(self, args: list = None):
-        cond = args[0]
-        val = args[1]
-        true_branch = args[2]
-        false_branch = args[3]
-
-        val = self.evaluate(val)
-
-        pass
+        if self.evaluate(args[0]):
+            return self.evaluate(self.evaluate(args[1]))
+        return self.evaluate(self.evaluate(args[2]))
 
     def define(self, lisp_list: list):
         ident = self.evaluate(lisp_list[0])
@@ -153,5 +152,5 @@ class Eval:
 
     def print(self, args: list):
         val = self.evaluate(args)
-        print(self.env.get(val, val))
-        return val
+        print(val)
+        return None
