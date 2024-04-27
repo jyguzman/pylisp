@@ -1,5 +1,4 @@
 from Token import TokenType, Token
-from typing import Union
 
 
 class Lexer:
@@ -86,7 +85,10 @@ class Lexer:
         elif c == ')':
             token = Token(TokenType.RPAREN, self.pos, c)
         elif c == ';':
-            token = Token(TokenType.SEMI, self.pos, c)
+            while self.peek() != '\n':
+                self.advance()
+            self.advance()
+            return self.match()
         elif c == '=':
             token = Token(TokenType.EQUALS, self.pos, c)
         elif c == '<':
@@ -122,15 +124,16 @@ class Lexer:
         self.advance()
         return token
 
-    def addToken(self, token: Token):
-        self.tokens.append(token)
-
     def print(self):
         print('\n'.join([str(t) for t in self.tokens]))
 
-
     def lex(self, source: str = None):
+        if source:
+            self.source = source
+            self.pos = 0
+            self.tokens.clear()
+
         while not self.is_eof():
-            token = self.match()
-            self.addToken(token)
+            self.tokens.append(self.match())
+
         return self.tokens

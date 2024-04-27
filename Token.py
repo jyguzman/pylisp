@@ -48,6 +48,7 @@ class Token:
     type: TokenType
     pos: int
     literal: Union[int, float, str, None]
+    col: int = 0
 
     def __repr__(self):
         return f'Token({self.type}, {self.pos}, {self.literal})'

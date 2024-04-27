@@ -1,5 +1,11 @@
+from typing import Any
 from Token import Token, TokenType
+from dataclasses import dataclass
 
+
+class LispValue:
+    type: str
+    value: Any
 
 class Parser:
     def __init__(self, tokens: list[Token] = None):

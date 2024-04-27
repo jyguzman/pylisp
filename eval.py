@@ -1,18 +1,20 @@
 from dataclasses import dataclass
+import functools
 from env import Env
 
 MATH_OPS = {'+', '-', '*', '/'}
 COMPARISON_OPS = {'=', '>', '>=', '<', '<='}
 BINARY_OPS = MATH_OPS.union(COMPARISON_OPS)
-SPECIAL = {'lambda', 'def', 'if', 'list', 'defun'}
-BUILT_INS = {'read', 'format'}
+SPECIAL = {'lambda', 'define', 'if', 'list', 'defun'}
+BUILT_INS = {'read', 'format', 'print'}
+FUNCTIONS = BINARY_OPS.union(SPECIAL, BUILT_INS)
+
 
 @dataclass
 class Function:
     params: list[str]
     body: list
     name: str = None
-    env: dict = None
 
 
 def check_is_number(val):
@@ -30,121 +32,126 @@ def cons(lisp_list: list):
 
 
 class Eval:
-    def __init__(self, lists: list = None, global_env: dict = None):
+    def __init__(self, lists: list = None, env: dict = None):
         self.lists = lists
-        self.global_env = global_env
+        self.env = env
 
-    def evaluate(self, lisp_list, env=None):
-        if not isinstance(lisp_list, list):
-            return lisp_list
-        first_val = lisp_list[0]
-        if isinstance(first_val, list):
-            first_val = self.evaluate(first_val, env)
-            env[first_val] = first_val
+    def evaluate(self, lisp_value):
+        if not isinstance(lisp_value, list):
+            if isinstance(lisp_value, str) and lisp_value in self.env:
+                return self.env[lisp_value]
+            return lisp_value
+        if isinstance(lisp_value[0], list):
+            lisp_value[0] = self.evaluate(lisp_value[0])
+        first_val = self.evaluate(lisp_value[0])
+        if not isinstance(first_val, Function) and first_val not in FUNCTIONS:
+            print("First element must be a function, operator, or special form.")
+            exit(1)
         if isinstance(first_val, Function):
-            return self.eval_fn(first_val, lisp_list[1:], env)
+            return self.eval_fn(first_val, lisp_value[1:])
         if first_val == 'lambda':
-            fn = Function(lisp_list[1], lisp_list[2])
-            if len(lisp_list) < 4:
+            fn = Function(lisp_value[1], lisp_value[2])
+            if len(lisp_value) < 4:
                 return fn
-            return self.eval_fn(fn, lisp_list[3:], env)
+            return self.eval_fn(fn, lisp_value[3:])
         if first_val == 'defun':
-            ident, args, body = lisp_list[1], lisp_list[2], lisp_list[3]
-            return Function(args, body, env=env, name=ident)
+            name, args, body = lisp_value[1], lisp_value[2], lisp_value[3]
+            fn = Function(args, body, name=name)
+            self.env[name] = fn
+            return fn
         if first_val == 'if':
-            return self.eval_if(lisp_list[1:], env)
-        if first_val in BINARY_OPS:
-            return self.binary(first_val, cons(lisp_list), env)
+            return self.eval_if(lisp_value[1:])
         if first_val == 'print':
-            return self.print(lisp_list[1], env)
+            return self.print(lisp_value[1])
         if first_val == 'define':
-            return self.define(lisp_list[1:], env)
-        env_val = env.get(first_val, None)
-        if env_val and isinstance(env_val, Function):
-            return self.eval_fn(env_val, lisp_list[1:], env)
-        return lisp_list
+            return self.define(lisp_value[1:])
+        if first_val in BINARY_OPS:
+            return self.binary(first_val, cons(lisp_value))
+        return None
 
     def eval_special_form(self, sf: str, lisp_list: list):
         pass
 
-    def bind_function_vars(self, fn_scope: dict, fn_body: list, env=None):
+    def bind_function_vars(self, fn_scope: dict, fn_body: list):
         for i, elem in enumerate(fn_body):
             if isinstance(elem, list):
-                self.bind_function_vars(fn_scope, elem, env)
+                self.bind_function_vars(fn_scope, elem)
             else:
                 if fn_body[i] in fn_scope:
                     fn_body[i] = fn_scope[fn_body[i]]
 
-    def eval_fn(self, fn: Function, args: list, env=None):
+    def eval_fn(self, fn: Function, args: list):
         params, body = fn.params, fn.body[0:]
         fn_scope = {}
         for i in range(len(params)):
-            fn_scope[params[i]] = self.evaluate(args[i], env)
+            fn_scope[params[i]] = self.evaluate(args[i])
 
-        self.bind_function_vars(fn_scope, body, env)
-        return self.evaluate(body, env)
+        self.bind_function_vars(fn_scope, body)
+        return self.evaluate(body)
 
-    def binary(self, op: str, lisp_list: list, env=None):
+    def binary(self, op: str, lisp_list: list):
         if op in MATH_OPS:
-            return self.math_op(op, lisp_list, env)
+            return self.math_op(op, lisp_list)
         if op in COMPARISON_OPS:
-            return self.comparison(op, lisp_list, env)
-        print(f"Invalid operator {op}")
+            return self.comparison(op, lisp_list)
+        print(f"Invalid operator {op}.")
         exit(1)
 
-    def comparison(self, op: str, lisp_list: list, env: dict = None):
-        val = env.get(lisp_list[0], lisp_list[0])
-        for elem in lisp_list[1:]:
-            other_val = self.evaluate(elem, env)
-            other_val = env.get(other_val, other_val)
+    def comparison(self, op: str, lisp_list: list):
+        new_list = [self.evaluate(item) for item in lisp_list]
+        val = new_list[0]
+        for other_val in new_list[1:]:
             if (
-                op == '=' and val != other_val or
-                op == '>' and val <= other_val or
-                op == '<' and val > other_val or
-                op == '>=' and val < other_val or
-                op == '<=' and val > other_val
+                    op == '=' and val != other_val or
+                    op == '>' and val <= other_val or
+                    op == '<' and val >= other_val or
+                    op == '>=' and val < other_val or
+                    op == '<=' and val > other_val
             ):
-                return None
+                return False
         return True
 
-    def math_op(self, op: str, lisp_list: list, env: dict = None):
-        acc = env.get(lisp_list[0], lisp_list[0])
-        for elem in lisp_list[1:]:
-            val = self.evaluate(elem, env)
-            val = env.get(val, val)
-            check_is_number(val)
-            if op == '+':
-                acc += val
-            elif op == '-':
-                acc -= val
-            elif op == '*':
-                acc *= val
-            else:
-                acc /= val
-        return acc
+    def op(self, op: str, a, b):
+        if not isinstance(a, (int, float)):
+            print(f'{a} is not a number.')
+            exit(1)
+        if not isinstance(b, (int, float)):
+            print(f'{b} is not a number.')
+            exit(1)
 
-    def bind_cond_vars(self, cond: list, vars: list, env: dict = None):
+        if op == '+':
+            return a + b
+        elif op == '-':
+            return a - b
+        elif op == '*':
+            return a * b
+        else:
+            return a / b
+
+    def math_op(self, op: str, lisp_list: list):
+        new_list = [self.evaluate(item) for item in lisp_list]
+        return functools.reduce(lambda a, b: self.op(op, a, b), new_list)
+
+    def bind_cond_vars(self, cond: list, variables: list):
         pass
 
-    def eval_if(self, args: list=None, env=None):
+    def eval_if(self, args: list = None):
         cond = args[0]
         val = args[1]
         true_branch = args[2]
         false_branch = args[3]
 
-        val = self.evaluate(val, env)
+        val = self.evaluate(val)
 
         pass
 
-    def define(self, lisp_list: list, env=None):
-        ident = self.evaluate(lisp_list[0], env)
-        val = self.evaluate(lisp_list[1], env)
-        env[ident] = val
+    def define(self, lisp_list: list):
+        ident = self.evaluate(lisp_list[0])
+        val = self.evaluate(lisp_list[1])
+        self.env[ident] = val
         return val
 
-    def print(self, args: list, env=None):
-        val = self.evaluate(args, env)
-        print(env.get(val, val))
+    def print(self, args: list):
+        val = self.evaluate(args)
+        print(self.env.get(val, val))
         return val
-
-

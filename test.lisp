@@ -9,4 +9,4 @@
             (just-a-random-function x))) )
 (print compose)
 (def print-hello (lambda () (print "Hello!")))
-(print-hello ())
+(print-hello)
