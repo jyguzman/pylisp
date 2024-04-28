@@ -7,6 +7,7 @@ class LispValue:
     type: str
     value: Any
 
+
 class Parser:
     def __init__(self, tokens: list[Token] = None):
         self.tokens = tokens
@@ -24,9 +25,6 @@ class Parser:
             return Token(TokenType.EOF, self.pos, "")
         return self.tokens[self.pos]
 
-    def atom(self):
-        return self.peek().literal
-
     def parse_list(self):
         lisp_list = []
         while self.advance().type not in (TokenType.RPAREN, TokenType.EOF):
@@ -34,7 +32,7 @@ class Parser:
         return lisp_list
 
     def parse_expression(self):
-        return self.parse_list() if self.peek().type == TokenType.LPAREN else self.atom()
+        return self.parse_list() if self.peek().type == TokenType.LPAREN else self.peek().literal
 
     def parse(self):
         lists = []

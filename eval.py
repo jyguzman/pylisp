@@ -24,14 +24,6 @@ def check_is_number(val):
         exit(1)
 
 
-def car(lisp_list: list):
-    return lisp_list[0]
-
-
-def cons(lisp_list: list):
-    return lisp_list[1:]
-
-
 def math_binary(op: str, a, b):
     if not isinstance(a, (int, float)):
         print(f'{a} is not a number.')
@@ -57,7 +49,7 @@ class Eval:
 
     def evaluate(self, lisp_value):
         if not isinstance(lisp_value, list):
-            if isinstance(lisp_value, (str, Function)) and lisp_value in self.env:
+            if isinstance(lisp_value, str) and lisp_value in self.env:
                 return self.env[lisp_value]
             return lisp_value
         if isinstance(lisp_value[0], list):
@@ -68,24 +60,12 @@ class Eval:
             exit(1)
         if isinstance(first_val, Function):
             return self.eval_fn(first_val, lisp_value[1:])
-        if first_val == 'lambda':
-            fn = Function(lisp_value[1], lisp_value[2])
-            if len(lisp_value) < 4:
-                return fn
-            return self.eval_fn(fn, lisp_value[3:])
-        if first_val == 'defun':
-            name, args, body = lisp_value[1], lisp_value[2], lisp_value[3]
-            fn = Function(args, body, name=name)
-            self.env[name] = fn
-            return fn
-        if first_val == 'if':
-            return self.eval_if(lisp_value[1:])
+        if first_val in SPECIAL:
+            return self.eval_sf(first_val, lisp_value)
+        if first_val in BINARY_OPS:
+            return self.binary(first_val, lisp_value[1:])
         if first_val == 'print':
             return self.print(lisp_value[1])
-        if first_val == 'define':
-            return self.define(lisp_value[1:])
-        if first_val in BINARY_OPS:
-            return self.binary(first_val, cons(lisp_value))
         print(f"Operator or function {first_val} not available.")
         exit(1)
 
@@ -125,14 +105,34 @@ class Eval:
                 return False
         return True
 
+    def eval_sf(self, sf: str, lisp_list: list):
+        match sf:
+            case 'lambda':
+                fn = Function(lisp_list[1], lisp_list[2])
+                if len(lisp_list) < 4:
+                    return fn
+                return self.eval_fn(fn, lisp_list[3:])
+            case 'defun':
+                name, args, body = lisp_list[1], lisp_list[2], lisp_list[3]
+                fn = Function(args, body, name=name)
+                self.env[name] = fn
+                return fn
+            case 'if':
+                return self.eval_if(lisp_list[1:])
+            case 'define':
+                return self.define(lisp_list[1:])
+            case _:
+                print(f"{sf} not an available special form.")
+                exit(1)
+
     def math_op(self, op: str, lisp_list: list):
         new_list = [self.evaluate(item) for item in lisp_list]
         return functools.reduce(lambda a, b: math_binary(op, a, b), new_list)
 
     def eval_if(self, args: list = None):
-        if self.evaluate(args[0]):
-            return self.evaluate(self.evaluate(args[1]))
-        return self.evaluate(self.evaluate(args[2]))
+        condition = self.evaluate(args[0])
+        true_branch, false_branch = args[1], args[2]
+        return self.evaluate(true_branch) if condition else self.evaluate(false_branch)
 
     def define(self, lisp_list: list):
         ident = self.evaluate(lisp_list[0])
@@ -144,3 +144,6 @@ class Eval:
         val = self.evaluate(args)
         print(val)
         return None
+
+    def format(self, dest: str, string: str, args: list):
+        pass

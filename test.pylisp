@@ -1,0 +1,10 @@
+(defun square (x) (* x x))
+(print (square 10))
+(defun fib-helper (n a b)
+    (if (= n 0)
+        a
+        (if (= n 1)
+            b
+            (fib-helper (- n 1) b (+ a b)))))
+(defun fib (n) (fib-helper n 0 1))
+(print (fib 100))
