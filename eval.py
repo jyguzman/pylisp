@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import functools
+from copy import deepcopy
 
 MATH_OPS = {'+', '-', '*', '/'}
 COMPARISON_OPS = {'=', '>', '>=', '<', '<='}
@@ -14,6 +15,7 @@ class Function:
     params: list[str]
     body: list
     name: str = None
+    env: dict = None
 
 
 def check_is_number(val):
@@ -55,17 +57,15 @@ class Eval:
 
     def evaluate(self, lisp_value):
         if not isinstance(lisp_value, list):
-            if isinstance(lisp_value, str) and lisp_value in self.env:
+            if isinstance(lisp_value, (str, Function)) and lisp_value in self.env:
                 return self.env[lisp_value]
             return lisp_value
         if isinstance(lisp_value[0], list):
             lisp_value[0] = self.evaluate(lisp_value[0])
-        first_val = self.env.get(lisp_value[0], lisp_value[0])
+        first_val = self.evaluate(lisp_value[0])
         if not isinstance(first_val, Function) and first_val not in FUNCTIONS:
-            print("this isnt valid", first_val)
             print("First element must be a function, operator, or special form.")
             exit(1)
-        # print("first val", first_val)
         if isinstance(first_val, Function):
             return self.eval_fn(first_val, lisp_value[1:])
         if first_val == 'lambda':
@@ -98,7 +98,10 @@ class Eval:
                     fn_body[i] = fn_scope[fn_body[i]]
 
     def eval_fn(self, fn: Function, args: list):
-        params, body = fn.params, fn.body[0:]
+        if isinstance(fn.body, int):
+            return fn.body
+
+        params, body = fn.params, deepcopy(fn.body)
         fn_scope = {}
         for i in range(len(params)):
             fn_scope[params[i]] = self.evaluate(args[i])
@@ -129,15 +132,8 @@ class Eval:
         return True
 
     def math_op(self, op: str, lisp_list: list):
-        # new_list = [self.evaluate(item) for item in lisp_list]
-        # return functools.reduce(lambda a, b: math_binary(op, a, b), new_list)
-        acc = self.evaluate(lisp_list[0])
-        for other in lisp_list[1:]:
-            acc += self.evaluate(other)
-        return acc
-
-    def bind_cond_vars(self, cond: list, variables: list):
-        pass
+        new_list = [self.evaluate(item) for item in lisp_list]
+        return functools.reduce(lambda a, b: math_binary(op, a, b), new_list)
 
     def eval_if(self, args: list = None):
         if self.evaluate(args[0]):
