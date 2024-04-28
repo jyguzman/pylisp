@@ -98,14 +98,8 @@ class Eval:
                     fn_body[i] = fn_scope[fn_body[i]]
 
     def eval_fn(self, fn: Function, args: list):
-        if isinstance(fn.body, int):
-            return fn.body
-
         params, body = fn.params, deepcopy(fn.body)
-        fn_scope = {}
-        for i in range(len(params)):
-            fn_scope[params[i]] = self.evaluate(args[i])
-
+        fn_scope = {params[i]: self.evaluate(args[i]) for i in range(len(params))}
         self.bind_function_vars(fn_scope, body)
         return self.evaluate(body)
 
